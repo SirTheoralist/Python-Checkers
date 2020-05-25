@@ -1,0 +1,275 @@
+from tkinter import *
+import copy
+
+class draughts_board:
+    def __init__(self, board):
+        self.board = board
+
+class Player:
+    def __init__(self, colour):
+        self.colour = colour
+        self.inventory = []
+    def addToInv(self, piece):
+        self.inventory.append(piece)
+
+class man(Player):
+    def __init__(self, colour, symbol):
+        super().__init__(colour)
+        self.symbol = symbol
+                    
+class king(Player):
+    def __init__(self, colour, symbol):
+        super().__init__(colour)
+        self.symbol = symbol
+            
+class GUI:
+    def __init__(self, master, board):
+        self.master = master
+        self.guiboard = copy.deepcopy(board)
+        self.currentPlayer = None
+        self.count = 1
+        self.moveList = []
+
+    def restore(self):
+            for widgets in self.master.winfo_children():
+                widgets.destroy()
+
+    def makeMenu(self):
+        self.master.config(bg='slate gray1')
+        self.bg = Label(self.master)
+        self.bg.config(bg='light blue', height=37, width=78, borderwidth=5, relief="solid")
+        self.bg.pack(side=TOP, expand=YES)
+        self.welcome = Label(self.master, text="Checkers")
+        self.welcome.config(font=("Consolas", 30, "bold"), bg='dark orange3', height=2, width=15, borderwidth=5, relief="solid")
+        self.welcome.place(relx = 0.5, rely = 0.3, anchor = CENTER)
+        self.play = Button(self.master, text="Play", command= lambda: playGame())
+        self.play.config(font=("Consolas", 24), bg='dark orange2', width=5, borderwidth=5, relief="solid")
+        self.play.place(relx = 0.5, rely = 0.5, anchor = CENTER)
+        self.help = Button(self.master, text="Help", command= lambda: printHelp())
+        self.help.config(font=("Consolas", 24), bg='dark orange2', width=5, borderwidth=5, relief="solid")
+        self.help.place(relx = 0.5, rely = 0.64, anchor = CENTER)
+
+    def helpMessage(self):
+        self.bg = Label(self.master)
+        self.bg.config(bg='light blue', height=37, width=78, borderwidth=5, relief="solid")
+        self.bg.pack(side=TOP, expand=YES)
+        self.back = Button(self.master, text="Back", command= lambda: [self.restore(), self.makeMenu()])
+        self.back.config(font=("Consolas", 24),  bg='dark orange2', height=1, width=4, borderwidth=5, relief="solid")
+        self.back.place(relx = 0.06, rely = 0.06, anchor = NW)
+        with open("CheckersInstructions.txt","r") as file:
+            info = file.read()
+            file.close()
+        self.info = Message(self.master, text = info)
+        self.info.config(font=("Consolas"), bg='dark orange3', width=500, borderwidth=5, relief="solid")
+        self.info.place(relx = 0.5, rely = 0.55, anchor = CENTER)
+
+    def showWin(self, winner):
+        self.win = Label(self.master, text=winner.colour+" wins!")
+        self.win.config(font=("Consolas", 24), bg='sky blue', borderwidth=5, relief="solid")
+        self.win.place(relx = 0.5, rely = 0.5, anchor = CENTER)
+        
+    def playerNow(self, message):
+        self.mes = Label(self.master, text=message)
+        self.mes.config(font=("Consolas", 15), bg='sky blue', borderwidth=1, relief="solid")
+        self.mes.grid(row = 8, columnspan = 8, sticky = 'NSEW')
+
+    def makeBoard(self):
+        for position in range (len(self.guiboard)):
+            if isinstance(self.guiboard[position][0], man) or isinstance(self.guiboard[position][0], king):
+                self.guiboard[position][0] = (self.guiboard[position][0]).symbol
+        
+        index = 0
+        for row in range(8):
+            for column in range(8):
+                if (row%2 == column%2 == 0) or (row%2 == column%2 == 1):
+                    self.square = Label(self.master, text=self.guiboard[index][0])
+                    self.square.config(font=("Consolas", 35), height=2, width=4, bg='dark orange3', borderwidth=1, relief="solid")
+                    self.square.grid(row=row, column=column, sticky = 'NSEW')
+                else:
+                    self.square = Label(self.master, text=self.guiboard[index][0])
+                    self.square.config(font=("Consolas", 35), height=2, width=4, bg='slate gray1', borderwidth=1, relief="solid")
+                    self.square.grid(row=row, column=column, sticky = 'NSEW')
+                    self.square.bind('<ButtonPress-1>', lambda event, arg=index: self.makeList(event, arg))
+                    self.square.bind('<ButtonPress-3>', lambda event, arg=index: self.makeList(event, arg))
+                self.master.grid_columnconfigure(column, weight=1)
+                self.master.grid_rowconfigure(row, weight=1)
+                index+=1
+
+    def listLoop(self):
+        hasMoved = False
+        for move in range(len(self.moveList)-1):
+            if checkMove(self.moveList[move], self.moveList[move+1], self.currentPlayer):
+                self.guiboard = copy.deepcopy(checkers.board)
+                hasMoved = True
+        if hasMoved:
+            self.makeBoard()
+            playerSwap()
+
+    def makeList(self, event, index):
+        if event.num == 1:
+            if self.count == 1:
+                self.moveList = []
+                self.moveList.append(index)
+                self.count = 0
+            else:
+                self.moveList.append(index)
+                self.count = 1
+                self.listLoop()
+
+        if event.num == 3: 
+            self.moveList.append(index)
+                         
+' ==================================== CheKers ==================================== '
+def checkCapture(move, destination, player):
+    if checkers.board[move][0] == blackMan:
+        captured = checkers.board[move + int((destination - move)/2)]
+        
+        if destination - move in [14, 18] and captured[0] not in [blackMan, blackKing, ' ']:
+            checkers.board[destination][0], checkers.board[move][0] = checkers.board[move][0], checkers.board[destination][0]
+            player.addToInv(captured[0])
+            captured[0] = ' '
+            return True
+        
+        if (destination - move in [14, 18]) and captured[0] in [blackMan, blackKing]:
+            return False
+        if destination - move in [14, 18] and captured[0] == ' ':
+            return False
+        
+    if checkers.board[move][0] == whiteMan:
+        captured = checkers.board[move - int((move - destination)/2)]
+        
+        if move - destination in [14, 18] and captured[0] not in [whiteMan, whiteKing, ' ']:
+            checkers.board[move][0], checkers.board[destination][0] = checkers.board[destination][0], checkers.board[move][0]
+            player.addToInv(captured[0])
+            captured[0] = ' '
+            return True
+        
+        if move - destination in [14,18] and captured[0] in [whiteMan, whiteKing]:
+            return False
+        if move - destination in [14, 18] and captured[0] == ' ':
+            return False
+
+    if isinstance(checkers.board[move][0], king):
+        
+        if destination - move in [14, 18] and checkers.board[move + int((destination - move)/2)][0].colour != checkers.board[move][0].colour:
+            captured = checkers.board[move + int((destination - move)/2)]
+            checkers.board[destination][0], checkers.board[move][0] = checkers.board[move][0], checkers.board[destination][0]
+            player.addToInv(captured[0])
+            captured[0] = ' '
+            return True
+        if (destination - move in [14, 18]) and captured[0].colour == checkers.board[move][0].colour:
+            return False
+        if destination - move in [14, 18] and captured[0] == ' ':
+            return False
+        
+        if move - destination in [14, 18] and checkers.board[move - int((move - destination)/2)][0].colour != checkers.board[move][0].colour:
+            captured = checkers.board[move - int((move - destination)/2)]
+            checkers.board[move][0], checkers.board[destination][0] = checkers.board[destination][0], checkers.board[move][0]
+            player.addToInv(captured[0])
+            captured[0] = ' '
+            return True
+        if move - destination in [14,18] and captured[0].colour == checkers.board[move][0].colour:
+            return False
+        if move - destination in [14, 18] and captured[0] == ' ':
+            return False
+        
+def checkCrowning(destination, player):
+    move = checkers.board[destination][1]
+
+    if checkers.board[destination][0] == whiteMan and move in [1, 2, 3, 4]:
+        checkers.board[destination][0] = whiteKing
+        return True
+    
+    if checkers.board[destination][0] == blackMan and move in [29, 30, 31, 32]:
+        checkers.board[destination][0] = blackKing
+        return True
+    
+def checkMove(move, destination, player):
+    if checkers.board[move][0] == ' ':
+        return False
+    
+    if checkers.board[move][0].colour != player.colour: 
+        return False
+    
+    if checkers.board[destination][0] != ' ':
+        return False
+    
+    if checkCapture(move, destination, player):
+        if checkCrowning(destination, player):
+            return True
+        return True
+
+    if (checkers.board[move][0] == whiteMan and (move-destination in [7,9])) or (checkers.board[move][0] == blackMan and (destination-move in [7,9])):
+        checkers.board[move][0], checkers.board[destination][0] = ' ', checkers.board[move][0]
+        if checkCrowning(destination, player):
+            return True
+        return True
+    if isinstance(checkers.board[move][0], king) and (move-destination in [7,9,-7,-9]):
+        checkers.board[move][0], checkers.board[destination][0] = ' ', checkers.board[move][0]
+        return True
+    else:
+        return False
+    
+def possibleMoves(board, player):
+    pass
+
+def gameEnd(board, player):
+    if len(black.inventory) == 12:
+        return (True, black)
+    if len(white.inventory) == 12:
+        return (True, white)
+    if possibleMoves(board, player) == 0:
+        return True
+
+def initBoard(board):
+    root = Tk()
+    root.geometry("605x623")
+    root.title("Checkers")
+    root.configure(background='black')
+    gui = GUI(root, checkers.board)
+    return gui
+
+def playerSwap():
+    global colour
+    player = black if colour==1 else white
+    gui.currentPlayer = player
+    gui.playerNow(gui.currentPlayer.colour)
+    if gameEnd(checkers.board, player):
+        winner = gameEnd(checkers.board, player)[1]
+        gui.showWin(winner)
+    colour = 2 if colour == 1 else 1
+
+def playGame():
+    gui.restore()
+    gui.makeBoard()
+    gui.guiboard = checkers.board
+    colour = 1
+    playerSwap()
+    gui.master.mainloop()
+
+def printHelp():
+    gui.restore()
+    gui.helpMessage()
+       
+' ==================================== CheKers ==================================== '
+
+black = Player("Black")
+blackMan = man("Black", '⛂')
+blackKing = blackKing = king("Black", '⛃')
+
+white = Player("White")
+whiteMan = man("White",'⛀')
+whiteKing = king("White", '⛁')
+
+checkers = draughts_board([[' '],[blackMan,1],[' '],[blackMan,2],[' '],[blackMan,3],[' '],[blackMan,4],
+                        [blackMan,5],[' '],[blackMan,6],[' '],[blackMan,7],[' '],[blackMan,8],[' '],
+                        [' '],[blackMan,9],[' '],[blackMan,10],[' '],[blackMan,11],[' '],[blackMan,12],
+                        [' ',13],[' '],[' ',14],[' '],[' ',15],[' '],[' ',16],[' '],
+                        [' '],[' ',17],[' '],[' ',18],[' '],[' ',19],[' '],[' ',20],
+                        [whiteMan,21],[' '],[whiteMan,22],[' '],[whiteMan,23],[' '],[whiteMan,24],[' '],
+                        [' '],[whiteMan,25],[' '],[whiteMan,26],[' '],[whiteMan,27],[' '],[whiteMan,28],
+                        [whiteMan,29],[' '],[whiteMan,30],[' '],[whiteMan,31],[' '],[whiteMan,32],[' ']])
+gui = initBoard(checkers.board)
+colour = 1
+gui.makeMenu()
+gui.master.mainloop()
