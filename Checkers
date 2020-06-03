@@ -1,6 +1,5 @@
 from tkinter import *
 import copy
-import winsound
 
 class draughts_board:
     def __init__(self, board):
