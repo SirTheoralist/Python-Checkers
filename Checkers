@@ -1,466 +1,274 @@
-import tkinter as tk
-import random
-import winsound
+from tkinter import *
+import copy
+ 
+class draughts_board:
+    def __init__(self, board):
+        self.board = board
 
-class Deck:
-    def __init__(self, cards, displayedCards):
-        self.cards = cards
-        self.displayedCards = displayedCards
-
-    def shuffle(self):
-        random.shuffle(self.cards)
-    
-class Card:
-    def __init__(self, number, colour, suit):
-        self.number = number
+class Player:
+    def __init__(self, colour):
         self.colour = colour
-        self.suit = suit
-        self.location = None
+        self.inventory = []
+    def addToInv(self, piece):
+        self.inventory.append(piece)
 
-class Stock:
-    def __init__(self, stockCards):
-        self.cards = stockCards
-        for card in self.cards:
-            card.location = 'Stock'
-
-    def shuffle(self):
-        self.cards = [deck.cards[card] for card in range(24)]
-        for card in self.cards:
-            card.location = 'Stock'
-
-    def show_card(self, event):
-        if self.cards != []:
-            self.cards[-1].location = 'Waste'
-            waste.cards.append(self.cards.pop(-1))
-            gui.setup_stock()
-            gui.setup_waste()
-            
-    def refil_cards(self, event):
-        self.cards = [waste.cards[card] for card in range(len(waste.cards) - 1, -1, -1)]
-        waste.cards = []
-        gui.setup_stock()
-        gui.setup_waste()
-
-class Waste:
-    def __init__(self, wasteCards):
-        self.cards = wasteCards
-
-    def renew(self):
-        self.cards = []
-
-    def move_card(self, moveList):
-        if tableau.cards[moveList[1][0]] == [] and self.cards[moveList[0]].number == 13:
-            tableau.cards[moveList[1][0]].append(self.cards[moveList[0]])
-            del self.cards[moveList[0]]
-            gui.setup_waste()
-            gui.update_col(moveList[1][0])
-            return True
-        if self.cards[moveList[0]].number + 1 == tableau.cards[moveList[1][0]][moveList[1][1]].number:
-            if self.cards[moveList[0]].colour != tableau.cards[moveList[1][0]][moveList[1][1]].colour:
-                tableau.cards[moveList[1][0]].append(self.cards[moveList[0]])
-                del self.cards[moveList[0]]
-            gui.setup_waste()
-            gui.update_col(moveList[1][0])
-            return True
-        return False
-
-class Foundation:
-    def __init__(self):
-        self.cards = [[], [], [], []]
-
-    def renew(self):
-        self.cards = [[], [], [], []]
-
-    def drop_card(self, moveList):
-        if moveList[0][1] == 'Waste':
-            if waste.cards[moveList[0][0]].number == 1 and self.cards[moveList[1][0]] == []:
-                self.cards[moveList[1][0]].append(waste.cards[moveList[0][0]])
-                self.cards[moveList[1][0]][-1].location = 'Foundation'
-                del waste.cards[moveList[0][0]]
-                gui.setup_waste()
-                gui.setup_foundation()
-                return True
-            if waste.cards[moveList[0][0]].number - 1 == self.cards[moveList[1][0]][-1].number:
-                if waste.cards[moveList[0][0]].suit == self.cards[moveList[1][0]][-1].suit:
-                    if waste.cards[moveList[0][0]].colour == self.cards[moveList[1][0]][-1].colour:
-                        self.cards[moveList[1][0]].append(waste.cards[moveList[0][0]])
-                        self.cards[moveList[1][0]][-1].location = 'Foundation'
-                        del waste.cards[moveList[0][0]]
-                        gui.setup_waste()
-                        gui.setup_foundation()
-                        return True
-        if moveList[0][1] == 'Tableau':
-            if tableau.cards[moveList[0][0][0]][moveList[0][0][1]].number == 1 and self.cards[moveList[1][0]] == []:
-                self.cards[moveList[1][0]].append(tableau.cards[moveList[0][0][0]][moveList[0][0][1]])
-                self.cards[moveList[1][0]][-1].location = 'Foundation'
-                del tableau.cards[moveList[0][0][0]][moveList[0][0][1]]
-                gui.update_col(moveList[0][0][0])
-                gui.setup_foundation()
-                return True
-            if tableau.cards[moveList[0][0][0]][moveList[0][0][1]].number - 1 == self.cards[moveList[1][0]][-1].number:
-                if tableau.cards[moveList[0][0][0]][moveList[0][0][1]].suit == self.cards[moveList[1][0]][-1].suit:
-                    if tableau.cards[moveList[0][0][0]][moveList[0][0][1]].colour == self.cards[moveList[1][0]][-1].colour:
-                        self.cards[moveList[1][0]].append(tableau.cards[moveList[0][0][0]][moveList[0][0][1]])
-                        self.cards[moveList[1][0]][-1].location = 'Foundation'
-                        del tableau.cards[moveList[0][0][0]][moveList[0][0][1]]
-                        gui.update_col(moveList[0][0][0])
-                        gui.setup_foundation()
-                        return True
-        return False
-                           
-    def pick_card(self, moveList):
-        if self.cards[moveList[0][0]][-1].number + 1 == tableau.cards[moveList[1][0][0]][moveList[1][0][1]].number:
-            if self.cards[moveList[0][0]][-1].colour != tableau.cards[moveList[1][0][0]][moveList[1][0][1]].colour:
-                tableau.cards[moveList[1][0][0]].append(self.cards[moveList[0][0]][-1])
-                tableau.cards[moveList[1][0][0]][-1].location = tableau.cards[moveList[1][0][0]][moveList[1][0][1]].location
-                del self.cards[moveList[0][0]][-1]
-                gui.update_col(moveList[1][0][0])
-                gui.setup_foundation()
-                return True
-        return False
-
-class Tableau:
-    def __init__(self, tableauCards):
-        self.unorderedCards = tableauCards
-        self.convert_to_grid()
-        for card in self.unorderedCards:
-            card.location = 'Tableau'
-
-    def shuffle(self):
-        self.unorderedCards = [deck.cards[card] for card in range(24, 52)]
-        for card in self.unorderedCards:
-            card.location = 'Tableau'
-        tableau.convert_to_grid()
-
-    def convert_to_grid(self):
-        self.cards = []
-        start, end, counter = 0, 0, 1
-        while end < len(self.unorderedCards):
-            row = []
-            for count in range(start, end + 1):
-                row.append(self.unorderedCards[count])
-                if count == end:
-                    start = start + counter
-                    end = start + counter
-                    counter += 1
-            self.cards.append(row)
-
-    def move_cards(self, moveList):
-        moveFrom, moveTo = moveList[0][0], moveList[1][0]
-        if moveList[0][1] == 'Tableau':
-            if (self.cards[moveTo[0]] == []) and (self.cards[moveFrom[0]][moveFrom[1]].number == 13):
-                self.cards[moveTo[0]].extend( self.cards[moveFrom[0]] [ moveFrom[1] : len(self.cards[moveFrom[0]]) ] )
-                for card in range(moveFrom[1], len(self.cards[moveFrom[0]]) - 1):
-                        self.cards[moveFrom[0]][card].location = 'Tableau'
-                del self.cards[moveFrom[0]] [ moveFrom[1] : len(self.cards[moveFrom[0]]) ]
-                gui.update_col(moveFrom[0])
-                gui.update_col(moveTo[0])
-                return True   
-            if self.cards[moveFrom[0]][moveFrom[1]].number + 1 == self.cards[moveTo[0]][moveTo[1]].number:
-                if self.cards[moveFrom[0]][moveFrom[1]].colour != self.cards[moveTo[0]][moveTo[1]].colour:                
-                    self.cards[moveTo[0]].extend( self.cards[moveFrom[0]] [ moveFrom[1] : len(self.cards[moveFrom[0]]) ] )
-                    for card in range(moveFrom[1], len(self.cards[moveFrom[0]]) - 1):
-                        self.cards[moveFrom[0]][card].location = self.cards[moveTo[0]][moveTo[1]].location
-                    del self.cards[moveFrom[0]] [ moveFrom[1] : len(self.cards[moveFrom[0]]) ]
-                    gui.update_col(moveFrom[0])
-                    gui.update_col(moveTo[0])
-                    return True
-                
-        if moveList[0][1] == 'Waste':
-            if (self.cards[moveTo[0]] == []) and (waste.cards[moveFrom].number == 13):
-                self.cards[moveTo[0]].append(waste.cards[moveFrom])
-                self.cards[moveTo[0]][-1].location = 'Tableau'
-                del waste.cards[moveFrom]
-                gui.update_col(moveTo[0])
-                gui.setup_waste()
-                return True
-            if waste.cards[moveFrom].number + 1 == self.cards[moveTo[0]][moveTo[1]].number:
-                if waste.cards[moveFrom].colour != self.cards[moveTo[0]][moveTo[1]].colour:
-                    self.cards[moveTo[0]].append(waste.cards[moveFrom])
-                    self.cards[moveTo[0]][-1].location = self.cards[moveTo[0]][moveTo[1]].location
-                    del waste.cards[moveFrom]
-                    gui.update_col(moveTo[0])
-                    gui.setup_waste()
-                    return True
-        return False
-        
-    def new_pile(self):
-        pass
-
-class GUI:
-    
-    def __init__(self, root):
-        self.root = root
-        self.root.title("Solitaire")
-        self.root.config(bg = bgColour)
-        self.create_layout()
-
-    def create_layout(self):
-        self.topBar = tk.Frame(self.root, bg = bgColour)
-        self.topBar.pack(fill = 'x', pady = 5)
-
-        self.main = tk.Frame(self.root, bg = bgColour)
-        self.main.pack()
-        
-        self.stockFrame = tk.Frame(self.main, bg = bgColour)
-        self.stockFrame.grid(row = 0, column = 0, sticky = 'NSEW', pady = (5, 35))
-
-        self.foundationFrame = tk.Frame(self.main, bg = bgColour)
-        self.foundationFrame.grid(row = 0, column = 1, columnspan = 2, sticky = 'NSEW', pady = (5, 35))
-        
-        self.tableauFrame = tk.Frame(self.main, bg = bgColour)
-        self.tableauFrame.grid(row = 1, column = 0, columnspan = 2, sticky = 'NSEW')
-
-        self.run = True; self.seconds = 00; self.minutes = 00; self.hours = 00
-        self.timer = tk.Label(self.topBar, bg = bgColour, fg = 'white', font = ("Consolas", 15, 'bold'))
-        self.newGame_button()
-        self.topBar.after(1, self.update_timer)
-        
-        self.count = 0
-        self.setup_stock()
-        self.setup_foundation()
-        self.setup_tableau()
-        
-    def restore(self, parent):
-        for widgets in parent.winfo_children():
-            widgets.destroy()
-            
-        if stock.cards == waste.cards == [] and len(deck.displayedCards) == 52:
-            with open ("solvable_solitaire_games.txt", 'a') as file:
-                for line in file:
-                    print (line)
-        
-    def newGame_button(self):
-        self.newGame = tk.Label(self.topBar, text = 'NEW GAME',
-                                bg = bgColour, fg = 'white', font = ("Consolas", 15, 'bold'))
-        self.newGame.bind('<ButtonPress-1>', self.confirm_button)
-        self.newGame.pack(side = 'left', padx = 19)
-
-    def confirm_button(self, event):
-        try: self.confirm.destroy()
-        except: AttributeError
-        self.confirm = tk.Label(self.topBar, text = 'CONFIRM NEW GAME?',
-                                bg = bgColour, fg = 'white', font = ("Consolas", 15, 'bold'))
-        self.confirm.bind('<ButtonPress-1>', init)
-        self.confirm.after(5000 , self.confirm.destroy)
-        self.confirm.pack()
-    
-    def update_timer(self):
-        self.timer.config(text = f'TIME: {self.hours}:{self.minutes}:{self.seconds}')
-        self.timer.pack(side = 'right', padx = 19)
-        self.seconds += 1
-        if self.seconds == 60:
-            self.minutes += 1; self.seconds = 0
-        elif self.minutes == 60:
-            self.hours += 1; self.minutes = 0
-        self.topBar.after(1000, self.update_timer)
-
-    def setup_stock(self):
-        self.restore(self.stockFrame)
-    
-        if stock.cards == [] or 1:
-            space = tk.Label(self.stockFrame, text = u'\u26ab', height = 3, width = 5, font = ("Consolas", 19, 'bold'),
-                                 bg = bgColour, fg = 'light slate grey', borderwidth = 1, relief = "flat")
-            space.bind('<ButtonPress-1>', stock.refil_cards)
-            space.grid(row = 0, column = 0, padx = 15)
-        
-        for card in stock.cards:
-            self.restore(self.stockFrame)
-            self.stockCard = tk.Label(self.stockFrame, text = cardBack, height = 3, width = 5, bg = cardBgColour, fg = cardBackdesign,
-                                      font = ("Consolas", 19), borderwidth = 1, relief = "solid")
-            self.stockCard.bind('<ButtonPress-1>', stock.show_card)
-            self.stockCard.grid(row = 0, column = 0, padx = 15)
-
-    def setup_waste(self):
-        if waste.cards == []:
-            space = tk.Label(self.stockFrame, bg = bgColour, height = 3, width = 5,
-                             font = ("Consolas", 19), borderwidth = 1, relief = "flat")
-            space.bind('<ButtonPress-1>', stock.refil_cards)
-            space.grid(row = 0, column = 1, padx = 15)
-            
-        for index, card in enumerate(waste.cards):
-            self.wasteCard = tk.Label(self.stockFrame, text = str(values[card.number]) + '  ' + card.suit + '\n' + card.suit, font = ("Consolas", 19),
-                                      bg = card.colour, fg = 'white', height = 3, width = 5, borderwidth = 1, relief = "solid", anchor = 'n')
-            self.wasteCard.grid(row = 0, column = 1, padx = 15)
-            self.wasteCard.bind('<ButtonPress-1>',
-                                lambda event, index = index: self.make_list(event, index, waste.cards[index].location))
-
-    def setup_foundation(self):
-        for pileNum, pile in enumerate(foundation.cards):
-            if pile == []:
-                self.foundationCard = tk.Label(self.foundationFrame, height = 3, width = 5, font = ("Consolas", 19),
-                                 bg = bgColour, borderwidth = 1, relief = "solid")
-                self.foundationCard.bind('<ButtonPress-1>',
-                                         lambda event, index = pileNum: self.make_list(event, index, 'Foundation'))
-                
-            for card in pile:
-                self.foundationCard = tk.Label(self.foundationFrame, height = 3, width = 5, text = str(values[card.number]) + '  ' + card.suit + '\n' + card.suit,
-                                          font = ("Consolas", 19), bg = card.colour, fg = 'white', borderwidth = 1, relief = "solid", anchor = 'n')
-                self.foundationCard.bind('<ButtonPress-1>',
-                                         lambda event, index = pileNum: self.make_list(event, index, 'Foundation'))
-            self.foundationCard.grid(row = 0, column = pileNum, padx = 15)
-            
-    def setup_tableau(self):
-        self.colList = []
-        
-        for col in range(7):
-            colFrame = tk.Frame(self.tableauFrame, bg = bgColour)
-            colFrame.grid(row = 0, column = col, sticky = 'N')
-            self.colList.append(colFrame)
-            self.update_col(col)
-            
-    def update_col(self, col):
-        self.restore(self.colList[col])
-                
-        if tableau.cards[col] == []:
-                space = tk.Label(self.colList[col], height = 3, width = 5, font = ("Consolas", 19),
-                                 bg = bgColour, borderwidth = 1, relief = "solid")
-                space.bind('<ButtonPress-1>', lambda event, index = [col, 0]:
-                           self.make_list(event, index, "Tableau"))
-                space.pack(side = 'top', padx = 15)
-                
-        for row, card in enumerate(tableau.cards[col]):              
-            self.tableauCard = tk.Label(self.colList[col], text = cardBack, font = ("Consolas", 19), bg = cardBgColour, fg = cardBackdesign,
-                                        height = 1, width = 5, borderwidth = 1, relief = "solid", anchor = 'n')
-            if row == len(tableau.cards[col]) - 1 or card in deck.displayedCards:
-                self.tableauCard.config(bg = card.colour, text = str(values[card.number]) + '  ' + card.suit + '\n' + card.suit,
-                                        font = ("Consolas", 19), fg = 'white', anchor = 'n')
-                if row == len(tableau.cards[col]) - 1:
-                    self.tableauCard.config(height = 3)
-                self.tableauCard.bind('<ButtonPress-1>', lambda event, index = [col, row]:
-                                      self.make_list(event, index, tableau.cards[col][row].location))
-                deck.displayedCards.append(card)
-            self.tableauCard.pack(side = 'top', padx = 15)
-                           
-    def make_list(self, event, index, location):
-        if self.count == 0:
-            self.moveList = []
-            self.moveList.append([index, location])
-            self.count = 1
-            
-        else:
-            self.moveList.append([index, location])
-            self.count = 0
-
-            if self.moveList[0][1] == self.moveList[1][1] == 'Tableau': #Tableau to Tableau move check
-                if not tableau.move_cards(self.moveList):
-                    self.moveList = [[index, tableau.cards[index[1]][index[1]].location]]
-                    self.count = 1
-                return None
-                
-            if [self.moveList[0][1], self.moveList[1][1]] == ['Waste', 'Tableau']: #Waste to Tableau move check
-                if not tableau.move_cards(self.moveList):
-                    self.moveList = [index, tableau.cards[index[1]][index[1]].location]
-                    self.count = 1
-                return None
-
-            if [self.moveList[0][1], self.moveList[1][1]] == ['Waste', 'Foundation']: #Waste to Foundation move check
-                if not foundation.drop_card(self.moveList):
-                    self.moveList = []
-                    self.count = 1
-                return None
-                                                                                                                                                                                                                                                                                                                                                          
-            if [self.moveList[0][1], self.moveList[1][1]] == ['Tableau', 'Foundation']: #Tableau to Foundation move check
-                if not foundation.drop_card(self.moveList):
-                    self.moveList = [index, 'Foundation']
-                    self.count = 1 
-                return None
+class man(Player):
+    def __init__(self, colour, symbol):
+        super().__init__(colour)
+        self.symbol = symbol
                     
-            if [self.moveList[0][1], self.moveList[1][1]] == ['Foundation', 'Tableau']: #Foundation to Tableau move check
-                if not foundation.pick_card(self.moveList):
-                    self.moveList = [index, tableau.cards[index[1]][index[1]].location]
-                    self.count = 1 
-                return None
-
-    def deselect_card(self, event):
-        self.moveList = []
-        print ("Cleared")
+class king(Player):
+    def __init__(self, colour, symbol):
+        super().__init__(colour)
+        self.symbol = symbol
             
-def init(event):
-    deck.shuffle()
-    deck.displayedCards = []
-    stock.shuffle()
-    waste.renew()
-    foundation.renew()
-    tableau.shuffle()
-    gui.moveList = []
-    gui.restore(gui.root)
-    gui.create_layout()
+class GUI:
+    def __init__(self, root, board):
+        self.root = root
+        self.root.title("Checkers")
+        
+        self.guiboard = copy.deepcopy(board)
+        self.currentPlayer = None
+        self.count = 1
+        self.moveList = []
+
+    def restore(self, parent):
+            for widgets in parent.winfo_children():
+                widgets.destroy()
+
+    def showWin(self, winner):
+        self.win = Label(self.root, text=winner.colour+" wins!")
+        self.win.config(font=("Consolas", 24), bg='black', fg='white', borderwidth=5, relief="solid")
+        self.win.place(relx = 0.5, rely = 0.5, anchor = CENTER)
+        
+    def playerNow(self, message):
+        self.mes = Label(self.root, text=message)
+        self.mes.config(font=("Consolas", 15), bg='black', fg='white', borderwidth=1, relief="solid")
+        self.mes.grid(row = 8, columnspan = 8, sticky = 'NSEW')
+
+    def replaceSymbols(self):
+        for row in range(len(self.guiboard)):
+            for col in range(8):
+                if isinstance(self.guiboard[row][col][0], man) or isinstance(self.guiboard[row][col][0], king):
+                    self.guiboard[row][col][0] = (self.guiboard[row][col][0]).symbol
+
+    def makeBoard(self):
+        self.replaceSymbols()
+        
+        self.frames = []
+        for rowNum, row in enumerate(self.guiboard):
+            frame = Frame(self.root)
+            frame.grid(row = rowNum)
+            self.frames.append(frame)
+            self.update_row(rowNum)
+
+    def update_row(self, rowNum):
+##        print ("Updating row", rowNum)
+        self.restore(self.frames[rowNum])
+        for colNum, position in enumerate(self.guiboard[rowNum]):
+##            print (colNum, self.guiboard[rowNum][colNum][0], end = ' ')
+            self.square = Label(self.root, text = self.guiboard[rowNum][colNum][0],
+                                font = ("Consolas", 45), height = 1, width = 2, borderwidth = 1, relief = "solid")
+            self.square.grid(row=rowNum, column=colNum, sticky = 'NSEW')
+            if (rowNum%2 == colNum%2 == 0) or (rowNum%2 == colNum%2 == 1):
+                self.square.config(bg = 'grey15')
+            else:
+                self.square.config(bg = 'grey75')
+                self.square.bind('<ButtonPress-1>', lambda event, index = [rowNum, colNum]: self.makeList(event, index))
+                self.square.bind('<ButtonPress-3>', lambda event, index = [rowNum, colNum]: self.makeList(event, index))
+##        print ()
+
+    def listLoop(self):
+        hasMoved = False
+        for move in range(len(self.moveList) - 1):
+            moveFrom = [self.moveList[move][0], self.moveList[move][1]]
+            moveTo = [self.moveList[move + 1][0], self.moveList[move + 1][1]]
+            if checkMove(moveFrom, moveTo, self.currentPlayer):
+                hasMoved = True
+                
+            if hasMoved:
+                self.guiboard = copy.deepcopy(checkers.board)
+                self.replaceSymbols()
+                self.update_row(moveFrom[0])
+                self.update_row(moveTo[0])
+                playerSwap()
+
+    def makeList(self, event, index):
+        if event.num == 1:
+            if self.count == 1:
+                self.moveList = []
+                self.moveList.append(index)
+                self.count = 0
+            else:
+                self.moveList.append(index)
+                self.count = 1
+                self.listLoop()
+                
+        if event.num == 3:
+            self.moveList.append(index)
+                         
+' ==================================== CheKers ==================================== '
+def checkMove(move, destination, player):
+    moveFrom = checkers.board[move[0]][move[1]]
+    moveTo = checkers.board[destination[0]][destination[1]]
     
-    tabCards = []
-    for col in tableau.cards:
-        for card in col:
-            tabCards.append(f"{card.number} {card.colour} {card.suit.encode()}")
+    if moveFrom[0] == ' ':
+        return False
+    
+    if moveFrom[0].colour != player.colour:
+        return False
+    
+    if moveTo[0] != ' ':
+        return False
+    
+    if checkCapture(move, destination, player):
+        if checkCrowning(destination, player):
+            return True
+        return True
 
-    stockCards = []
-    for card in stock.cards:
-        stockCards.append(f"{card.number} {card.colour} {card.suit.encode()}")
+    if (moveFrom[0] == blackMan and (moveTo[1] - moveFrom[1] in [3, 4, 5])) or (moveFrom[0] == whiteMan and (moveFrom[1] - moveTo[1] in [3, 4, 5])):
+        moveFrom[0], moveTo[0] = ' ', moveFrom[0]
+        if checkCrowning(destination, player):
+            return True
+        return True
 
-    print ("Tableau:", tabCards)
-    print ("Stock:", stockCards)
+    if isinstance(moveFrom[0], king) and (moveTo[1] - moveFrom[1] in [3, 4, 5, -3, -4, -5]):
+        moveFrom[0], moveTo[0] = ' ', moveFrom[0]
+        return True
+    
+    return False
+    
+def checkCapture(move, destination, player):
+    moveFrom = checkers.board[move[0]][move[1]]
+    moveTo = checkers.board[destination[0]][destination[1]]
+    
+    if moveFrom[0] == blackMan:
+        if destination[0] - move[0] == destination[1] - move[1] == 2:
+            captured = [move[0] + 1, move[1] + 1]
+        if [destination[0] - move[0], destination[1] - move[1]] == [2, -2]:
+            captured = [move[0] + 1, move[1] - 1]
+                                        
+        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0] not in [blackMan, blackKing]:
+            moveTo[0], moveFrom[0] = moveFrom[0], moveTo[0]
+            player.addToInv(checkers.board[captured[0]][captured[1]])
+            checkers.board[captured[0]][captured[1]][0] = ' '
+            gui.guiboard = copy.deepcopy(checkers.board)
+            gui.replaceSymbols()
+            gui.update_row(captured[0])
+            return True
 
-suits = [u'\u2665', u'\u2666', u'\u2660', u'\u2663'] #Hearts, Diamonds, Spades, Clubs
-numbers = [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13]
-values = {1 : "A", 2 : 2, 3 : 3, 4 : 4, 5 : 5, 6 : 6, 7 : 7, 8 : 8, 9: 9, 10 : 10, 11 : "J", 12 : "Q", 13 : "K"}
-deck = []
+        if 'captured' in locals():
+            if checkers.board[captured[0]][captured[1]][0] in [blackMan, blackKing] or checkers.board[captured[0]][captured[1]][0] == ' ':
+                return False
+        
+    if moveFrom[0] == whiteMan:
+        if destination[0] - move[0] == destination[1] - move[1] == -2:
+            captured = [move[0] - 1, move[1] - 1]
+        if [destination[0] - move[0], destination[1] - move[1]] == [-2, 2]:
+            captured = [move[0] - 1, move[1] + 1]
+                                        
+        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0] not in [whiteMan, whiteKing]:
+            moveTo[0], moveFrom[0] = moveFrom[0], moveTo[0]
+            player.addToInv(checkers.board[captured[0]][captured[1]])
+            checkers.board[captured[0]][captured[1]][0] = ' '
+            gui.guiboard = copy.deepcopy(checkers.board)
+            gui.replaceSymbols()
+            gui.update_row(captured[0])
+            return True
 
-cardBack = 4*'❈' + '\n' + '❈Ⓚ❈' + '\n' + 4*'❈'
-cardBgColour = 'midnight blue'
-cardBackdesign = 'royal blue'
-bgColour = 'dark slate grey'
+        if 'captured' in locals():
+            if checkers.board[captured[0]][captured[1]][0] in [whiteMan, whiteKing] or checkers.board[captured[0]][captured[1]][0] == ' ':
+                return False
 
-for suit in suits:
-    for number in numbers:
-        card = Card(number, "black", suit) if suit in [u'\u2660', u'\u2663'] else Card(number, "red", suit)
-        deck.append(card)
+    if isinstance(moveFrom[0], king):
+        
+        if destination[0] - move[0] == destination[1] - move[1] == 2:
+            captured = [move[0] + 1, move[1] + 1]
+        if [destination[0] - move[0], destination[1] - move[1]] == [2, -2]:
+            captured = [move[0] + 1, move[1] - 1]
+        if destination[0] - move[0] == destination[1] - move[1] == -2:
+            captured = [move[0] - 1, move[1] - 1]
+        if [destination[0] - move[0], destination[1] - move[1]] == [-2, 2]:
+            captured = [move[0] - 1, move[1] + 1]
+            
+        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0].colour != player.colour:
+            moveTo[0], moveFrom[0] = moveFrom[0], moveTo[0]
+            player.addToInv(checkers.board[captured[0]][captured[1]])
+            checkers.board[captured[0]][captured[1]][0] = ' '
+            gui.guiboard = copy.deepcopy(checkers.board)
+            gui.replaceSymbols()
+            gui.update_row(captured[0])
+            return True
 
-deck = Deck(deck, [])
-deck.shuffle()
-random.shuffle(deck.cards)
-stock = Stock([deck.cards[card] for card in range(24)])
-waste = Waste([])
-tableau = Tableau([deck.cards[card] for card in range(24, 52)])
-tableau.convert_to_grid()
-foundation = Foundation()
+        if 'captured' in locals():
+            if checkers.board[captured[0]][captured[1]][0].colour == player.colour or checkers.board[captured[0]][captured[1]][0] == ' ':
+                return False
+        
+def checkCrowning(destination, player):
+    moveTo = checkers.board[destination[0]][destination[1]]
+    
+    if moveTo[0] == blackMan and destination[0] == 7 :
+        moveTo[0] = blackKing
+        gui.guiboard = copy.deepcopy(checkers.board)
+        gui.replaceSymbols()
+        gui.update_row(7)
+        return True
+    
+    if moveTo[0] == whiteMan and destination[0] == 0 :
+        moveTo[0] = whiteKing
+        gui.guiboard = copy.deepcopy(checkers.board)
+        gui.replaceSymbols()
+        gui.update_row(0)
+        return True
+    
+def gameEnd(board, player):
+    if len(black.inventory) == 12:
+        return (True, black)
+    if len(white.inventory) == 12:
+        return (True, white)
 
-##tabCards = ''
-##for col in tableau.cards:
-##    for card in col:
-##        tabCards = tabCards + f"{card.number} {card.colour} {card.suit.encode()} "
-##
-##stockCards = ''
-##for card in stock.cards:
-##    stockCards = stockCards + f"{card.number} {card.colour} {card.suit.encode()} "
-##
-##tableaus = stocks = [] 
-##with open("solvable_solitaire_games.txt", 'r+') as file:
-##    lines = file.readlines()
-##    print (lines)
-##    file.write(tabCards + '\n' + stockCards + '\n')
-##    for lineNum, line in enumerate(lines):
-##        line = line.replace('\n', '')
-##        if lineNum % 2 == 0:
-####            print (f"{lineNum}...goes in Tableau: {line}")
-##            tableaus.append(f"{lineNum}...{line}")
-##        else:
-####            print (f"{lineNum}...goes in Stock: {line}")
-##            stocks.append(f"{lineNum}...{line}")
-####    print (tableaus)
-####    print (stocks)
-tabCards = []
-for col in tableau.cards:
-    for card in col:
-        tabCards.append(f"{card.number} {card.colour} {card.suit.encode()}")
+def playerSwap():
+    global colour
+    player = black if colour==1 else white
+    gui.currentPlayer = player
+    gui.playerNow(gui.currentPlayer.colour)
+    if gameEnd(checkers.board, player):
+        winner = gameEnd(checkers.board, player)[1]
+        gui.showWin(winner)
+    colour = 2 if colour == 1 else 1
 
-stockCards = []
-for card in stock.cards:
-    stockCards.append(f"{card.number} {card.colour} {card.suit.encode()}")
+def playGame():
+    gui.restore(gui.root)
+    gui.makeBoard()
+    gui.guiboard = checkers.board
+    colour = 1
+    playerSwap()
+    gui.root.mainloop()
 
-##print ("Tableau:", tabCards)
-##print ("Stock:", stockCards)
+def printHelp():
+    gui.restore()
+    gui.helpMessage()
+       
+' ==================================== CheKers ==================================== '
 
-gui = GUI(tk.Tk())
-if True:
-    winsound.PlaySound('KushSong.wav', winsound.SND_LOOP + winsound.SND_ASYNC)
+black = Player("Black")
+blackMan = man("Black", '⛂')
+blackKing = blackKing = king("Black", '⛃')
+
+white = Player("White")
+whiteMan = man("White", '⛀')
+whiteKing = king("White", '⛁')
+
+checkers = draughts_board([[[' '], [blackMan, 1], [' '], [blackMan, 2], [' '], [blackMan, 3], [' '],[blackMan, 4]],
+                        [[blackMan, 5], [' '], [blackMan, 6], [' '], [blackMan, 7], [' '], [blackMan, 8], [' ']],
+                        [[' '], [blackMan, 9], [' '], [blackMan, 10], [' '], [blackMan, 11], [' '], [blackMan, 12]],
+                        [[' ', 13], [' '], [' ', 14], [' '], [' ', 15], [' '], [' ', 16], [' ']],
+                        [[' '], [' ', 17], [' '], [' ', 18], [' '], [' ', 19], [' '], [' ', 20]],
+                        [[whiteMan, 21], [' '], [whiteMan, 22], [' '], [whiteMan, 23], [' '], [whiteMan, 24], [' ']],
+                        [[' '], [whiteMan, 25], [' '], [whiteMan, 26], [' '], [whiteMan, 27], [' '], [whiteMan, 28]],
+                        [[whiteMan, 29], [' '], [whiteMan, 30], [' '], [whiteMan, 31], [' '], [whiteMan, 32], [' ']]])
+
+gui = GUI(Tk(), checkers.board)
+colour = 1
+playGame()
 gui.root.mainloop()
-
