@@ -1,6 +1,7 @@
 from tkinter import *
 import copy
- 
+import winsound
+
 class draughts_board:
     def __init__(self, board):
         self.board = board
@@ -58,15 +59,15 @@ class GUI:
         self.frames = []
         for rowNum, row in enumerate(self.guiboard):
             frame = Frame(self.root)
-            frame.grid(row = rowNum)
+            frame.grid(row = rowNum, sticky = 'NSEW')
+            self.root.grid_rowconfigure(rowNum, weight = 1)
             self.frames.append(frame)
             self.update_row(rowNum)
 
     def update_row(self, rowNum):
-##        print ("Updating row", rowNum)
         self.restore(self.frames[rowNum])
         for colNum, position in enumerate(self.guiboard[rowNum]):
-##            print (colNum, self.guiboard[rowNum][colNum][0], end = ' ')
+            self.root.grid_columnconfigure(colNum, weight = 1)
             self.square = Label(self.root, text = self.guiboard[rowNum][colNum][0],
                                 font = ("Consolas", 45), height = 1, width = 2, borderwidth = 1, relief = "solid")
             self.square.grid(row=rowNum, column=colNum, sticky = 'NSEW')
@@ -76,7 +77,6 @@ class GUI:
                 self.square.config(bg = 'grey75')
                 self.square.bind('<ButtonPress-1>', lambda event, index = [rowNum, colNum]: self.makeList(event, index))
                 self.square.bind('<ButtonPress-3>', lambda event, index = [rowNum, colNum]: self.makeList(event, index))
-##        print ()
 
     def listLoop(self):
         hasMoved = False
@@ -147,8 +147,8 @@ def checkCapture(move, destination, player):
             captured = [move[0] + 1, move[1] + 1]
         if [destination[0] - move[0], destination[1] - move[1]] == [2, -2]:
             captured = [move[0] + 1, move[1] - 1]
-                                        
-        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0] not in [blackMan, blackKing]:
+
+        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0] not in [blackMan, blackKing, ' ']:
             moveTo[0], moveFrom[0] = moveFrom[0], moveTo[0]
             player.addToInv(checkers.board[captured[0]][captured[1]])
             checkers.board[captured[0]][captured[1]][0] = ' '
@@ -167,7 +167,7 @@ def checkCapture(move, destination, player):
         if [destination[0] - move[0], destination[1] - move[1]] == [-2, 2]:
             captured = [move[0] - 1, move[1] + 1]
                                         
-        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0] not in [whiteMan, whiteKing]:
+        if 'captured' in locals() and checkers.board[captured[0]][captured[1]][0] not in [whiteMan, whiteKing, ' ']:
             moveTo[0], moveFrom[0] = moveFrom[0], moveTo[0]
             player.addToInv(checkers.board[captured[0]][captured[1]])
             checkers.board[captured[0]][captured[1]][0] = ' '
