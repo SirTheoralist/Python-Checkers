@@ -1,7 +1,7 @@
 from tkinter import *
 import copy
 
-class draughts_board:
+class DraughtsBoard:
     def __init__(self, board):
         self.board = board
 
@@ -12,12 +12,12 @@ class Player:
     def addToInv(self, piece):
         self.inventory.append(piece)
 
-class man(Player):
+class Man(Player):
     def __init__(self, colour, symbol):
         super().__init__(colour)
         self.symbol = symbol
                     
-class king(Player):
+class King(Player):
     def __init__(self, colour, symbol):
         super().__init__(colour)
         self.symbol = symbol
@@ -26,6 +26,7 @@ class GUI:
     def __init__(self, root, board):
         self.root = root
         self.root.title("Checkers")
+        self.root.config(bg = "black")
         
         self.guiboard = copy.deepcopy(board)
         self.currentPlayer = None
@@ -35,64 +36,63 @@ class GUI:
     def restore(self, parent):
             for widgets in parent.winfo_children():
                 widgets.destroy()
-
-    def showWin(self, winner):
-        self.win = Label(self.root, text=winner.colour+" wins!")
-        self.win.config(font=("Consolas", 24), bg='black', fg='white', borderwidth=5, relief="solid")
-        self.win.place(relx = 0.5, rely = 0.5, anchor = CENTER)
         
-    def playerNow(self, message):
-        self.mes = Label(self.root, text=message)
-        self.mes.config(font=("Consolas", 15), bg='black', fg='white', borderwidth=1, relief="solid")
-        self.mes.grid(row = 8, columnspan = 8, sticky = 'NSEW')
+    def show_message(self, message):
+        try: self.mes.destroy()
+        except: AttributeError            
+        self.mes = Label(self.root, text = message)
+        self.mes.config(font=("Consolas", 15), bg = "black", fg = "white", borderwidth  =1, relief ="solid")
+        self.mes.pack()
 
-    def replaceSymbols(self):
+    def replace_symbols(self):
         for row in range(len(self.guiboard)):
             for col in range(8):
-                if isinstance(self.guiboard[row][col][0], man) or isinstance(self.guiboard[row][col][0], king):
+                if isinstance(self.guiboard[row][col][0], Man) or isinstance(self.guiboard[row][col][0], King):
                     self.guiboard[row][col][0] = (self.guiboard[row][col][0]).symbol
 
-    def makeBoard(self):
-        self.replaceSymbols()
+    def make_board(self):
+        self.replace_symbols()
         
         self.frames = []
         for rowNum, row in enumerate(self.guiboard):
             frame = Frame(self.root)
-            frame.grid(row = rowNum, sticky = 'NSEW')
-            self.root.grid_rowconfigure(rowNum, weight = 1)
+            frame.pack(expand = 1, fill = 'both', anchor = "center")
             self.frames.append(frame)
             self.update_row(rowNum)
 
     def update_row(self, rowNum):
         self.restore(self.frames[rowNum])
+        
         for colNum, position in enumerate(self.guiboard[rowNum]):
-            self.root.grid_columnconfigure(colNum, weight = 1)
-            self.square = Label(self.root, text = self.guiboard[rowNum][colNum][0],
+            self.square = Label(self.frames[rowNum], text = self.guiboard[rowNum][colNum][0],
                                 font = ("Consolas", 45), height = 1, width = 2, borderwidth = 1, relief = "solid")
-            self.square.grid(row=rowNum, column=colNum, sticky = 'NSEW')
+            self.square.pack(side = 'left', expand = 1, fill = 'both')
             if (rowNum%2 == colNum%2 == 0) or (rowNum%2 == colNum%2 == 1):
                 self.square.config(bg = 'grey15')
             else:
                 self.square.config(bg = 'grey75')
-                self.square.bind('<ButtonPress-1>', lambda event, index = [rowNum, colNum]: self.makeList(event, index))
-                self.square.bind('<ButtonPress-3>', lambda event, index = [rowNum, colNum]: self.makeList(event, index))
+                self.square.bind('<ButtonPress-1>', lambda event, index = [rowNum, colNum]: self.make_list(event, index))
+                self.square.bind('<ButtonPress-3>', lambda event, index = [rowNum, colNum]: self.make_list(event, index))
 
-    def listLoop(self):
+    def list_loop(self):
         hasMoved = False
         for move in range(len(self.moveList) - 1):
             moveFrom = [self.moveList[move][0], self.moveList[move][1]]
             moveTo = [self.moveList[move + 1][0], self.moveList[move + 1][1]]
-            if checkMove(moveFrom, moveTo, self.currentPlayer):
+            if check_move(moveFrom, moveTo, self.currentPlayer):
                 hasMoved = True
                 
             if hasMoved:
                 self.guiboard = copy.deepcopy(checkers.board)
-                self.replaceSymbols()
+                self.replace_symbols()
                 self.update_row(moveFrom[0])
                 self.update_row(moveTo[0])
-                playerSwap()
+                player_swap()
+            else:
+                self.moveList = [self.moveList[-1]]
+                self.count = 0
 
-    def makeList(self, event, index):
+    def make_list(self, event, index):
         if event.num == 1:
             if self.count == 1:
                 self.moveList = []
@@ -101,13 +101,13 @@ class GUI:
             else:
                 self.moveList.append(index)
                 self.count = 1
-                self.listLoop()
+                self.list_loop()
                 
         if event.num == 3:
             self.moveList.append(index)
                          
 ' ==================================== CheKers ==================================== '
-def checkMove(move, destination, player):
+def check_move(move, destination, player):
     moveFrom = checkers.board[move[0]][move[1]]
     moveTo = checkers.board[destination[0]][destination[1]]
     
@@ -120,24 +120,24 @@ def checkMove(move, destination, player):
     if moveTo[0] != ' ':
         return False
     
-    if checkCapture(move, destination, player):
-        if checkCrowning(destination, player):
+    if check_capture(move, destination, player):
+        if check_crowning(destination, player):
             return True
         return True
 
     if (moveFrom[0] == blackMan and (moveTo[1] - moveFrom[1] in [3, 4, 5])) or (moveFrom[0] == whiteMan and (moveFrom[1] - moveTo[1] in [3, 4, 5])):
         moveFrom[0], moveTo[0] = ' ', moveFrom[0]
-        if checkCrowning(destination, player):
+        if check_crowning(destination, player):
             return True
         return True
 
-    if isinstance(moveFrom[0], king) and (moveTo[1] - moveFrom[1] in [3, 4, 5, -3, -4, -5]):
+    if isinstance(moveFrom[0], King) and (moveTo[1] - moveFrom[1] in [3, 4, 5, -3, -4, -5]):
         moveFrom[0], moveTo[0] = ' ', moveFrom[0]
         return True
     
     return False
     
-def checkCapture(move, destination, player):
+def check_capture(move, destination, player):
     moveFrom = checkers.board[move[0]][move[1]]
     moveTo = checkers.board[destination[0]][destination[1]]
     
@@ -152,7 +152,7 @@ def checkCapture(move, destination, player):
             player.addToInv(checkers.board[captured[0]][captured[1]])
             checkers.board[captured[0]][captured[1]][0] = ' '
             gui.guiboard = copy.deepcopy(checkers.board)
-            gui.replaceSymbols()
+            gui.replace_symbols()
             gui.update_row(captured[0])
             return True
 
@@ -171,7 +171,7 @@ def checkCapture(move, destination, player):
             player.addToInv(checkers.board[captured[0]][captured[1]])
             checkers.board[captured[0]][captured[1]][0] = ' '
             gui.guiboard = copy.deepcopy(checkers.board)
-            gui.replaceSymbols()
+            gui.replace_symbols()
             gui.update_row(captured[0])
             return True
 
@@ -179,7 +179,7 @@ def checkCapture(move, destination, player):
             if checkers.board[captured[0]][captured[1]][0] in [whiteMan, whiteKing] or checkers.board[captured[0]][captured[1]][0] == ' ':
                 return False
 
-    if isinstance(moveFrom[0], king):
+    if isinstance(moveFrom[0], King):
         
         if destination[0] - move[0] == destination[1] - move[1] == 2:
             captured = [move[0] + 1, move[1] + 1]
@@ -195,7 +195,7 @@ def checkCapture(move, destination, player):
             player.addToInv(checkers.board[captured[0]][captured[1]])
             checkers.board[captured[0]][captured[1]][0] = ' '
             gui.guiboard = copy.deepcopy(checkers.board)
-            gui.replaceSymbols()
+            gui.replace_symbols()
             gui.update_row(captured[0])
             return True
 
@@ -203,62 +203,58 @@ def checkCapture(move, destination, player):
             if checkers.board[captured[0]][captured[1]][0].colour == player.colour or checkers.board[captured[0]][captured[1]][0] == ' ':
                 return False
         
-def checkCrowning(destination, player):
+def check_crowning(destination, player):
     moveTo = checkers.board[destination[0]][destination[1]]
     
     if moveTo[0] == blackMan and destination[0] == 7 :
         moveTo[0] = blackKing
         gui.guiboard = copy.deepcopy(checkers.board)
-        gui.replaceSymbols()
+        gui.replace_symbols()
         gui.update_row(7)
         return True
     
     if moveTo[0] == whiteMan and destination[0] == 0 :
         moveTo[0] = whiteKing
         gui.guiboard = copy.deepcopy(checkers.board)
-        gui.replaceSymbols()
+        gui.replace_symbols()
         gui.update_row(0)
         return True
     
-def gameEnd(board, player):
+def game_end(board, player):
     if len(black.inventory) == 12:
         return (True, black)
     if len(white.inventory) == 12:
         return (True, white)
 
-def playerSwap():
+def player_swap():
     global colour
-    player = black if colour==1 else white
+    player = black if colour == 1 else white
     gui.currentPlayer = player
-    gui.playerNow(gui.currentPlayer.colour)
-    if gameEnd(checkers.board, player):
-        winner = gameEnd(checkers.board, player)[1]
-        gui.showWin(winner)
+    gui.show_message(gui.currentPlayer.colour)
+    if game_end(checkers.board, player):
+        winner = game_end(checkers.board, player)[1]
+        gui.show_message(winner.colour + " wins!")
     colour = 2 if colour == 1 else 1
 
-def playGame():
+def play_game():
     gui.restore(gui.root)
-    gui.makeBoard()
+    gui.make_board()
     gui.guiboard = checkers.board
     colour = 1
-    playerSwap()
+    player_swap()
     gui.root.mainloop()
-
-def printHelp():
-    gui.restore()
-    gui.helpMessage()
        
 ' ==================================== CheKers ==================================== '
 
 black = Player("Black")
-blackMan = man("Black", '⛂')
-blackKing = blackKing = king("Black", '⛃')
+blackMan = Man("Black", '⛂')
+blackKing = King("Black", '⛃')
 
 white = Player("White")
-whiteMan = man("White", '⛀')
-whiteKing = king("White", '⛁')
+whiteMan = Man("White", '⛀')
+whiteKing = King("White", '⛁')
 
-checkers = draughts_board([[[' '], [blackMan, 1], [' '], [blackMan, 2], [' '], [blackMan, 3], [' '],[blackMan, 4]],
+checkers = DraughtsBoard([[[' '], [blackMan, 1], [' '], [blackMan, 2], [' '], [blackMan, 3], [' '],[blackMan, 4]],
                         [[blackMan, 5], [' '], [blackMan, 6], [' '], [blackMan, 7], [' '], [blackMan, 8], [' ']],
                         [[' '], [blackMan, 9], [' '], [blackMan, 10], [' '], [blackMan, 11], [' '], [blackMan, 12]],
                         [[' ', 13], [' '], [' ', 14], [' '], [' ', 15], [' '], [' ', 16], [' ']],
@@ -269,5 +265,5 @@ checkers = draughts_board([[[' '], [blackMan, 1], [' '], [blackMan, 2], [' '], [
 
 gui = GUI(Tk(), checkers.board)
 colour = 1
-playGame()
+play_game()
 gui.root.mainloop()
